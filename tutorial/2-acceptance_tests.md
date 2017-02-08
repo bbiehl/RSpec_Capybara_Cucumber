@@ -686,7 +686,115 @@ Finished in 0.31256 seconds (files took 1.72 seconds to load)
 ```
 
 ![New Achievement Form filled in](./img/2-new-achievement-form.png)
-![New Achievement Form Success!](./img/2-new-achievement-success.png)
+![New Achievement Form Success](./img/2-new-achievement-success.png)
 
-#### Refactor
+```
+$ rails c
+Running via Spring preloader in process 8236
+Loading development environment (Rails 5.0.1)
+Cannot read termcap database;
+using dumb terminal settings.
+2.3.1 :001 > Achievement.last
+  Achievement Load (0.2ms)  SELECT  "achievements".* FROM "achievements" ORDER BY "achievements"."id" DESC LIMIT ?  [["LIMIT", 1]]
+ => #<Achievement id: 1, title: "New Achievement", description: "I did it", privacy: "private_access", featured: true, cover_image: nil, created_at: "2017-02-08 21:09:46", updated_at: "2017-02-08 21:09:46">
+2.3.1 :002 >
+```
+
+```
+$ git add .
+$ git commit -m "first spec passes"
+```
+
+---
+
+### Testing Validation
+
+_/spec/features/create_achievememt_spec.rb_
+```ruby
+require 'rails_helper'
+
+feature 'create new achievement' do
+
+  .
+  .
+  .
+
+  scenario 'cannot create new achievement with invalid data' do
+    visit('/')
+    click_on('New Achievement')
+
+    click_on('Create Achievement')
+
+    expect(page).to have_content("Can't Be Blank!")
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) create new achievement cannot create new achievement with invalid data
+     Failure/Error: expect(page).to have_content("Can't Be Blank!")
+       expected to find text "Can't Be Blank!" in "Toggle navigation BDD New Achievement Achievement has been created Welcome"
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+  validates :title, presence: true
+
+  enum privacy: [ :public_access, :private_access, :friends_access ]
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) create new achievement cannot create new achievement with invalid data
+     Failure/Error: expect(page).to have_content("Can't Be Blank!")
+
+     Capybara::ElementNotFound:
+       Unable to find xpath "/html"
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  def new
+    @achievement = Achievement.new
+  end
+
+  def create
+    @achievement = Achievement.new(achievement_params)
+    if @achievement.save
+      redirect_to root_url, notice: 'Achievement has been created'
+    else
+      render :new
+    end
+  end
+
+  private
+
+  def achievement_params
+    params.require(:achievement).permit(:title, :description, :privacy, :cover_image, :featured)
+  end
+end
+```
+```
+$ rspec
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.39055 seconds (files took 1.7 seconds to load)
+3 examples, 0 failures
+```
+
+> This also works when manually tested, simple_form generates "can't be blank".
 
