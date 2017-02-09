@@ -1319,7 +1319,7 @@ Finished in 0.48758 seconds (files took 2.37 seconds to load)
 ### Cucumber
 > Tool for writing automated tests in plain language, so non-tech clients can create specs with us.
 
-#### Write Feature Spec
+#### Setup Cucumber
 
 Update _Gemfile_
 ```ruby
@@ -1367,9 +1367,142 @@ end
 gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 ```
 
+```
+$ bundle
+.
+.
+.
+Bundle complete! 25 Gemfile dependencies, 87 gems now installed.
+Use `bundle show [gemname]` to see where a bundled gem is installed.
+```
 
+```
+$ bundle exec spring binstub --all
+* bin/rake: spring already present
+* bin/cucumber: generated with spring
+* bin/rspec: spring already present
+* bin/rails: spring already present
+```
 
+```
+$ rails g cucumber:install
+Running via Spring preloader in process 13958
+Expected string default value for '--jbuilder'; got true (boolean)
+      create  config/cucumber.yml
+      create  script/cucumber
+       chmod  script/cucumber
+      create  features/step_definitions
+      create  features/step_definitions/.gitkeep
+      create  features/support
+      create  features/support/env.rb
+       exist  lib/tasks
+      create  lib/tasks/cucumber.rake
+        gsub  config/database.yml
+        gsub  config/database.yml
+       force  config/database.yml
+```
 
+#### Writing a Feature with Cucumber
+
+Create File:
+_/features/achievement_page.feature_
+```
+Feature: Achievement Page
+
+  In order to read others achievements
+  As a guest user
+  I want to see public achievements
+
+  Scenario: guest user sees public achievements
+    Given I am a guest user
+    And there is a public achievement
+    When I go to the achievements page
+    Then I must see achievements content
+```
+
+```
+$ cucumber
+.
+.
+.
+You can implement step definitions for undefined steps with these snippets:
+
+Given(/^I am a guest user$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+
+Given(/^there is a public achievement$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+
+When(/^I go to the achievements page$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+
+Then(/^I must see achievements content$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+```
+
+Create File and Copy/Paste:
+
+_/features/step_definitions/achievements_steps.rb_
+```ruby
+Given(/^I am a guest user$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+
+Given(/^there is a public achievement$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+
+When(/^I go to the achievements page$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+
+Then(/^I must see achievements content$/) do
+  pending # Write code here that turns the phrase above into concrete actions
+end
+```
+
+Defining steps individually.
+
+_/features/step_definitions/achievements_steps.rb_
+```ruby
+Given(/^I am a guest user$/) do
+  # empty step
+end
+
+Given(/^there is a public achievement$/) do
+  @achievement = FactoryGirl.create(:public_achievement, title: 'I did it')
+end
+
+When(/^I go to the achievements page$/) do
+  visit(achievement_path(@achievement.id))
+end
+
+Then(/^I must see achievements content$/) do
+  expect(page).to have_content('I did it')
+end
+```
+```
+$ cucumber
+Using the default profile...
+Feature: Achievement Page
+  In order to read others achievements
+  As a guest user
+  I want to see public achievements
+
+  Scenario: guest user sees public achievements # features/achievement_page.feature:7
+    Given I am a guest user                     # features/step_definitions/achievements_steps.rb:1
+    And there is a public achievement           # features/step_definitions/achievements_steps.rb:5
+    When I go to the achievements page          # features/step_definitions/achievements_steps.rb:9
+    Then I must see achievements content        # features/step_definitions/achievements_steps.rb:13
+
+1 scenario (1 passed)
+4 steps (4 passed)
+0m0.322s
+```
 
 
 
