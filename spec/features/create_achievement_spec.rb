@@ -1,26 +1,20 @@
 require 'rails_helper'
+require_relative '../support/new_achievement_form'
 
 feature 'create new achievement' do
-  scenario 'create new achievement with valid data' do
-    visit('/')
-    click_on('New Achievement')
+  let(:new_achievement_form) {NewAchievementForm.new}
 
-    fill_in('Title', with: 'Worked out today')
-    fill_in('Description', with: 'Crushed abs and cardio')
-    select('Public', from: 'Privacy')
-    check('Featured achievement')
-    attach_file('Cover image', "#{Rails.root}/spec/fixtures/cover_image.png")
-    click_on('Create Achievement')
+  scenario 'create new achievement with valid data' do
+    new_achievement_form.visit_page.fill_in_with(
+      title: 'Worked out today'
+      ).submit
 
     expect(page).to have_content('Achievement has been created')
     expect(Achievement.last.title).to eq('Worked out today')
   end
 
   scenario 'cannot create new achievement with invalid data' do
-    visit('/')
-    click_on('New Achievement')
-
-    click_on('Create Achievement')
+    new_achievement_form.visit_page.submit
 
     expect(page).to have_content("can't be blank")
   end

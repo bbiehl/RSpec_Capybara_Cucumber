@@ -795,6 +795,588 @@ home page
 Finished in 0.39055 seconds (files took 1.7 seconds to load)
 3 examples, 0 failures
 ```
+![Title Can't be Blank](./img/2-cant-be-blank.png)
 
-> This also works when manually tested, simple_form generates "can't be blank".
+---
+
+### Page Object Pattern
+> Refactoring what we just did.
+
+#### Create a support spec that includes Capybara helper methods.
+
+```
+$ mkdir spec/support
+```
+
+_/spec/support/new_achievement_form.rb_
+```ruby
+class NewAchievementForm
+  include Capybara::DSL
+
+  def visit_page
+    visit('/')
+    click_on('New Achievement')
+    self
+  end
+
+  def fill_in_with(params = {})
+    fill_in('Title', with: params.fetch(:title, 'Worked out today'))
+    fill_in('Description', with: 'Crushed abs and cardio')
+    select('Public', from: 'Privacy')
+    check('Featured achievement')
+    attach_file('Cover image', "#{Rails.root}/spec/fixtures/cover_image.png")
+
+    self
+  end
+
+  def submit
+    click_on('Create Achievement')
+    self    
+  end
+end
+```
+
+#### Refactor Specs:
+_/spec/features/create_achievement_spec.rb_
+```ruby
+require 'rails_helper'
+require_relative '../support/new_achievement_form'
+
+feature 'create new achievement' do
+  let(:new_achievement_form) {NewAchievementForm.new}
+
+  scenario 'create new achievement with valid data' do
+    new_achievement_form.visit_page.fill_in_with(
+      title: 'Worked out today'
+      ).submit
+
+    expect(page).to have_content('Achievement has been created')
+    expect(Achievement.last.title).to eq('Worked out today')
+  end
+
+  scenario 'cannot create new achievement with invalid data' do
+    new_achievement_form.visit_page.submit
+
+    expect(page).to have_content("can't be blank")
+  end
+end
+```
+```
+$ rspec
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.39953 seconds (files took 1.71 seconds to load)
+3 examples, 0 failures
+```
+
+---
+
+### Factory Girl
+> Prepare data for tests.
+
+#### Create new spec for the achievement page, testing against title.
+_/spec/features/achievement_page_spec.rb_
+```ruby
+require 'rails_helper'
+
+feature 'Achievement Page' do
+  scenario 'Achievement Public Page' do
+    achievement = Achievement.create(title: 'just did it')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('just did it')
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement Page Achievement Public Page
+     Failure/Error: visit("/achievements/#{achievement.id}")
+
+     ActionController::RoutingError:
+       No route matches [GET] "/achievements/1"
+```
+
+_/config/routes.rb_
+```ruby
+Rails.application.routes.draw do
+  resources :achievements, only: [ :new, :create, :show ]
+  root to: 'welcome#index'
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement Page Achievement Public Page
+     Failure/Error: visit("/achievements/#{achievement.id}")
+
+     AbstractController::ActionNotFound:
+       The action 'show' could not be found for AchievementsController
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+
+  .
+  .
+  .
+
+  def show  
+  end
+
+  private
+
+  .
+  .
+  .
+
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement Page Achievement Public Page
+     Failure/Error: visit("/achievements/#{achievement.id}")
+
+     ActionController::UnknownFormat:
+       AchievementsController#show is missing a template for this request format and variant.
+```
+
+#### Create File:
+
+_/app/views/achievements/show.html.erb_
+
+```
+$ rspec
+ Failures:
+
+  1) Achievement Page Achievement Public Page
+     Failure/Error: expect(page).to have_content('just did it')
+       expected to find text "just did it" in "Toggle navigation BDD New Achievement"
+```
+
+_/app/views/achievements/show.html.erb_
+```ruby
+<h1><%= @achievement.title %></h1>
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement Page Achievement Public Page
+     Failure/Error: expect(page).to have_content('just did it')
+       expected to find text "just did it" in "Toggle navigation BDD New Achievement"
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+
+  .
+  .
+  .
+
+  def show
+    @achievement = Achievement.find(params[:id])
+  end
+
+  private
+
+  .
+  .
+  .
+
+end
+```
+``` 
+$ rspec
+
+Achievement Page
+  Achievement Public Page
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.41951 seconds (files took 1.72 seconds to load)
+4 examples, 0 failures
+```
+
+#### Testing against description using factories.
+
+_/spec/features/achievement_page_spec.rb_
+```ruby
+require 'rails_helper'
+
+feature 'Achievement Page' do
+  scenario 'Achievement Public Page' do
+    achievement = FactoryGirl.create(:achievement)
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('just did it')
+  end
+
+  scenario 'Render Markdown Description' do
+    achievement = Achievement.create!(title: 'title', description: 'it was *cool*')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('it was <i>cool</i>')
+  end
+end
+```
+
+_/spec/factories/achievements.rb_
+```ruby
+FactoryGirl.define do
+  factory :achievement do
+    title "Title"
+    description "Description"
+    privacy Achievement.privacies[:private_access]
+    featured false
+    cover_image "some_image.png"
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement Page Achievement Public Page
+     Failure/Error: expect(page).to have_content('just did it')
+       expected to find text "just did it" in "Toggle navigation BDD New Achievement Title"
+
+  2) Achievement Page Render Markdown Description
+     Failure/Error: expect(page).to have_content('it was <i>cool</i>')
+       expected to find text "it was <i>cool</i>" in "Toggle navigation BDD New Achievement title"
+```
+_/app/views/achievements/show.html.erb_
+```ruby
+<h1><%= @achievement.title %></h1>
+<p><%= @achievement.description %></p>
+```
+
+> Markdown is not translating to an example achievement
+
+http://localhost:3000/achievements/3 
+![Markdown is not translating in this scenario](./img/2-md-not-translating.png)
+
+_/spec/features/achievement_page_spec.rb_
+```ruby
+require 'rails_helper'
+
+feature 'Achievement Page' do
+  scenario 'Achievement Public Page' do
+    achievement = FactoryGirl.create(:achievement, title: 'just did it')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('just did it')
+  end
+
+  scenario 'Render Markdown Description' do
+    achievement = FactoryGirl.create(:achievement, description: 'it was cool')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('it was cool')
+  end
+end
+```
+```
+$ rspec
+
+Achievement Page
+  Achievement Public Page
+  Render Markdown Description
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.43688 seconds (files took 1.69 seconds to load)
+5 examples, 0 failures
+```
+
+#### Defining Subfactories and Sequences in FactoryGirl
+_/spec/factories/achievements.rb_
+```ruby
+FactoryGirl.define do
+  factory :achievement do
+    sequence(:title) { |n| "Achievement #{n}"}
+    description "description"
+    privacy Achievement.privacies[:private_access]
+    featured false
+    cover_image "some_image.png"
+
+    factory :public_achievement do
+      privacy Achievement.privacies[:public_access]
+    end
+  end
+end
+```
+
+_/spec/achievement_page_spec.rb_
+```ruby
+require 'rails_helper'
+
+feature 'Achievement Page' do
+  scenario 'Achievement Public Page' do
+    achievement = FactoryGirl.create(:achievement, title: 'just did it')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('just did it')
+
+    achievements = FactoryGirl.create_list(:achievement, 3)
+    p achievements
+  end
+
+  scenario 'Render Markdown Description' do
+    achievement = FactoryGirl.create(:achievement, description: 'it was cool')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('it was cool')
+  end
+end
+```
+```
+$ rspec
+
+Achievement Page
+[#<Achievement id: 2, title: "Achievement 1", description: "description", privacy: "private_access", featured: false, cover_image: "some_image.png", created_at: "2017-02-09 15:34:26", updated_at: "2017-02-09 15:34:26">, #<Achievement id: 3, title: "Achievement 2", description: "description", privacy: "private_access", featured: false, cover_image: "some_image.png", created_at: "2017-02-09 15:34:26", updated_at: "2017-02-09 15:34:26">, #<Achievement id: 4, title: "Achievement 3", description: "description", privacy: "private_access", featured: false, cover_image: "some_image.png", created_at: "2017-02-09 15:34:26", updated_at: "2017-02-09 15:34:26">]
+  Achievement Public Page
+  Render Markdown Description
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.43592 seconds (files took 2.05 seconds to load)
+5 examples, 0 failures
+```
+
+#### Back to Testing Markdown
+
+_/spec/achievement_page_spec.rb_
+```ruby
+require 'rails_helper'
+
+feature 'Achievement Page' do
+  scenario 'Achievement Public Page' do
+    achievement = FactoryGirl.create(:achievement, title: 'just did it')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('just did it')
+  end
+
+  scenario 'Render Markdown Description' do
+    achievement = FactoryGirl.create(:achievement, description: 'it was *cool*')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('it was <em>cool</em>')
+  end
+end
+```
+
+In _Gemfile_, add `gem 'redcarpet'`
+
+```
+$ bundle
+.
+.
+.
+Installing redcarpet 3.4.0 with native extensions
+Bundle complete! 22 Gemfile dependencies, 79 gems now installed.
+Use `bundle show [gemname]` to see where a bundled gem is installed.
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def show
+    @achievement = Achievement.find(params[:id])
+    @description = Redcarpet::Markdown.new(Redcarpet::Render::HTML).render(@achievement.description)
+  end
+
+  private
+
+  .
+  .
+  .
+end
+```
+
+_/app/views/achievements/show.html.erb_
+```ruby
+<h1><%= @achievement.title %></h1>
+<p><%= @description %></p>
+```
+```
+$ rspec
+
+Achievement Page
+  Achievement Public Page
+  Render Markdown Description
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.43844 seconds (files took 1.78 seconds to load)
+5 examples, 0 failures
+```
+
+But taking a look at the browser:
+![HTML in the description](./img/2-md-in-text.png)
+
+_/app/views/achievements/show.html.erb_
+```ruby
+<h1><%= @achievement.title %></h1>
+<div><%= @description.html_safe %></div>
+```
+![Redcarpet is working now](./img/2-redcarpet-working.png)
+
+#### But, we now need to find the CSS:
+```
+$ rspec
+
+Failures:
+
+  1) Achievement Page Render Markdown Description
+     Failure/Error: expect(page).to have_content('it was <em>cool</em>')
+       expected to find text "it was <em>cool</em>" in "Toggle navigation BDD New Achievement Achievement 1 it was cool"
+```
+
+_/spec/achievement_page_spec.rb_
+```ruby
+require 'rails_helper'
+
+feature 'Achievement Page' do
+  scenario 'Achievement Public Page' do
+    achievement = FactoryGirl.create(:achievement, title: 'just did it')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_content('just did it')
+  end
+
+  scenario 'Render Markdown Description' do
+    achievement = FactoryGirl.create(:achievement, description: 'it was *cool*')
+    visit("/achievements/#{achievement.id}")
+
+    expect(page).to have_css('em', text: 'cool')
+  end
+end
+```
+```
+$ rspec
+
+Achievement Page
+  Achievement Public Page
+  Render Markdown Description
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.48758 seconds (files took 2.37 seconds to load)
+5 examples, 0 failures
+```
+
+---
+
+### Cucumber
+> Tool for writing automated tests in plain language, so non-tech clients can create specs with us.
+
+#### Write Feature Spec
+
+Update _Gemfile_
+```ruby
+source 'https://rubygems.org'
+
+git_source(:github) do |repo_name|
+  repo_name = "#{repo_name}/#{repo_name}" unless repo_name.include?("/")
+  "https://github.com/#{repo_name}.git"
+end
+
+gem 'rails', '~> 5.0.1'
+gem 'sqlite3'
+gem 'puma', '~> 3.0'
+gem 'sass-rails', '~> 5.0'
+gem 'uglifier', '>= 1.3.0'
+gem 'coffee-rails', '~> 4.2'
+gem 'jquery-rails'
+gem 'turbolinks', '~> 5'
+gem 'jbuilder', '~> 2.5'
+gem 'bootstrap-sass'
+gem 'simple_form'
+gem 'redcarpet'
+
+group :development, :test do
+  gem 'byebug', platform: :mri
+  gem 'rspec-rails'
+  gem 'factory_girl_rails'
+end
+
+group :test do
+  gem 'capybara'
+  gem 'cucumber-rails', require: false
+  gem 'database_cleaner'
+end
+
+group :development do
+  gem 'web-console', '>= 3.3.0'
+  gem 'listen', '~> 3.0.5'
+  gem 'spring'
+  gem 'spring-commands-rspec'
+  gem 'spring-commands-cucumber'
+  gem 'spring-watcher-listen', '~> 2.0.0'
+end
+
+gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
