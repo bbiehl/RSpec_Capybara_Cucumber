@@ -594,6 +594,348 @@ Finished in 0.08879 seconds (files took 1.82 seconds to load)
 
 ### Test Index and Edit actions
 
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  describe 'GET index' do
+    it 'renders :index template' do
+      get :index
+      expect(response).to render_template(:index)
+    end
+
+    it 'assigns only public achievements to the template'
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController GET index renders :index template
+     Failure/Error: get :index
+
+     ActionController::UrlGenerationError:
+       No route matches {:action=>"index", :controller=>"achievements"}
+```
+
+_/config/routes_
+```ruby
+Rails.application.routes.draw do
+  resources :achievements
+  root to: 'welcome#index'
+end
+```
+``` 
+$ rspec
+
+Failures:
+
+  1) AchievementsController GET index renders :index template
+     Failure/Error: get :index
+
+     AbstractController::ActionNotFound:
+       The action 'index' could not be found for AchievementsController
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  def index
+  end
+
+  .
+  .
+  .
+end
+```
+
+And create File: _/app/views/achievements/index.html.erb_
+
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET index
+    renders :index template
+    assigns only public achievements to the template (PENDING: Not yet implemented)
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Pending: (Failures listed here are expected and do not affect your suite's status)
+
+  1) AchievementsController GET index assigns only public achievements to the template
+     # Not yet implemented
+     # ./spec/controllers/achievements_controller_spec.rb:11
+
+
+Finished in 0.09384 seconds (files took 1.83 seconds to load)
+10 examples, 0 failures, 1 pending
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+
+describe AchievementsController do
+  describe 'GET index' do
+    it 'renders :index template' do
+      get :index
+      expect(response).to render_template(:index)
+    end
+
+    it 'assigns only public achievements to the template' do
+      public_achievement = FactoryGirl.create(:public_achievement)
+      private_achievement = FactoryGirl.create(:private_achievement)
+      get :index
+      expect(assigns(:achievements)).to match_array([public_achievement])
+    end
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController GET index assigns only public achievements to the template
+     Failure/Error: expect(assigns(:achievements)).to match_array([public_achievement])
+       expected a collection that can be converted to an array with `#to_ary` or `#to_a`, but got nil
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  def index
+    @achievements = Achievement.all
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController GET index assigns only public achievements to the template
+     Failure/Error: expect(assigns(:achievements)).to match_array([public_achievement])
+
+       expected collection contained:  [#<Achievement id: 1, title: "Achievement 1", description: "description", privacy: "public_access", f...over_image: "some_image.png", created_at: "2017-02-09 21:36:28", updated_at: "2017-02-09 21:36:28">]
+       actual collection contained:    [#<Achievement id: 1, title: "Achievement 1", description: "description", privacy: "public_access", f...over_image: "some_image.png", created_at: "2017-02-09 21:36:28", updated_at: "2017-02-09 21:36:28">]
+       the extra elements were:        [#<Achievement id: 2, title: "Achievement 2", description: "description", privacy: "private_access", ...over_image: "some_image.png", created_at: "2017-02-09 21:36:28", updated_at: "2017-02-09 21:36:28">]
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  def index
+    @achievements = Achievement.public_access
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET index
+    renders :index template
+    assigns only public achievements to the template
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Finished in 0.11069 seconds (files took 1.8 seconds to load)
+10 examples, 0 failures
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'GET edit' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    it 'renders :edit template' do
+      get :edit, params: { id: achievement }
+      expect(response).to render_template(:edit)
+    end
+
+    it 'assigns the requested achievement to the template'
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController GET edit renders :edit template
+     Failure/Error: get :edit, params: { id: achievement }
+
+     AbstractController::ActionNotFound:
+       The action 'edit' could not be found for AchievementsController
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def edit
+  end
+
+  .
+  .
+  .
+end
+```
+
+And, create new file: _/app/views/achievements/edit.html.erb_
+
+```
+$ rspec
+
+12 examples, 0 failures, 1 pending
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'GET edit' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    it 'renders :edit template' do
+      get :edit, params: { id: achievement }
+      expect(response).to render_template(:edit)
+    end
+
+    it 'assigns the requested achievement to the template' do
+      get :edit, params: { id: achievement }
+      expect(assigns(:achievement)).to eq(achievement)
+    end
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController GET edit assigns the requested achievement to the template
+     Failure/Error: expect(assigns(:achievement)).to eq(achievement)
+
+       expected: #<Achievement id: 1, title: "Achievement 4", description: "description", privacy: "public_access", fe...cover_image: "some_image.png", created_at: "2017-02-09 21:51:37", updated_at: "2017-02-09 21:51:37">
+            got: nil
+
+       (compared using ==)
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def edit
+    @achievement = Achievement.find(params[:id])
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET index
+    renders :index template
+    assigns only public achievements to the template
+  GET edit
+    renders :edit template
+    assigns the requested achievement to the template
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Finished in 0.13 seconds (files took 1.85 seconds to load)
+12 examples, 0 failures
+```
+
+---
+
+### Test Update and Destroy actions
+
 ---
 
 ### Install and setup Devise gem

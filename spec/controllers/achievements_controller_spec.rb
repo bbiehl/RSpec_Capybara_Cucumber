@@ -1,6 +1,38 @@
 require 'rails_helper'
 
 describe AchievementsController do
+  describe 'GET index' do
+    it 'renders :index template' do
+      get :index
+      expect(response).to render_template(:index)
+    end
+
+    it 'assigns only public achievements to the template' do
+      public_achievement = FactoryGirl.create(:public_achievement)
+      private_achievement = FactoryGirl.create(:private_achievement)
+      get :index
+      expect(assigns(:achievements)).to match_array([public_achievement])
+    end
+  end
+
+  describe 'GET edit' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    it 'renders :edit template' do
+      get :edit, params: { id: achievement }
+      expect(response).to render_template(:edit)
+    end
+
+    it 'assigns the requested achievement to the template' do
+      get :edit, params: { id: achievement }
+      expect(assigns(:achievement)).to eq(achievement)
+    end
+  end
+
+
+
+
+
   describe 'GET new' do
     it 'renders :new template' do
       get :new
@@ -29,7 +61,7 @@ describe AchievementsController do
   describe 'POST create' do
     context 'valid data' do
       let(:valid_data) { FactoryGirl.attributes_for(:public_achievement) }
-      
+
       it 'redirects to achievements#show' do
         post :create, params: { achievement: valid_data }
         expect(response).to redirect_to(achievement_path(assigns[:achievement]))
