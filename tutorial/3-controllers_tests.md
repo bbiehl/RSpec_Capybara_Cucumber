@@ -299,6 +299,297 @@ Finished in 0.49806 seconds (files took 1.82 seconds to load)
 
 ### Test Create action
 
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'POST create' do
+    it 'redirects to achievements#show' do
+      post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement) }
+      expect(response).to redirect_to(achievement_path(assigns[:achievement]))
+    end
+
+    it 'creates new achievement in the database'
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController POST create redirects to achievements#show
+     Failure/Error: @achievement = Achievement.new(achievement_params)
+
+     ArgumentError:
+       '0' is not a valid privacy
+```
+
+_/spec/factories/achievements.rb_
+```ruby
+FactoryGirl.define do
+  factory :achievement do
+    sequence(:title) { |n| "Achievement #{n}"}
+    description "description"
+    featured false
+    cover_image "some_image.png"
+
+    factory :public_achievement do
+      privacy :public_access
+    end
+
+    factory :private_achievement do
+      privacy :private_access
+    end
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController POST create redirects to achievements#show
+     Failure/Error: expect(response).to redirect_to(achievement_path(assigns[:achievement]))
+
+       Expected response to be a redirect to <http://test.host/achievements/1> but was a redirect to <http://test.host/>.
+       Expected "http://test.host/achievements/1" to be === "http://test.host/".
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def create
+    @achievement = Achievement.new(achievement_params)
+    if @achievement.save
+      # redirect_to root_url, notice: 'Achievement has been created'
+      redirect_to achievement_url(@achievement), notice: 'Achievement has been created'
+    else
+      render :new
+    end
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    redirects to achievements#show
+    creates new achievement in the database (PENDING: Not yet implemented)
+
+Pending: (Failures listed here are expected and do not affect your suite's status)
+
+  1) AchievementsController POST create creates new achievement in the database
+     # Not yet implemented
+     # ./spec/controllers/achievements_controller_spec.rb:34
+
+
+Finished in 0.06642 seconds (files took 1.81 seconds to load)
+6 examples, 0 failures, 1 pending
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'POST create' do
+    it 'redirects to achievements#show' do
+      post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement) }
+      expect(response).to redirect_to(achievement_path(assigns[:achievement]))
+    end
+
+    it 'creates new achievement in the database' do
+      expect {
+        post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement) }
+      }.to change(Achievement, :count).by(1)
+    end
+  end
+end
+```
+```
+$ rspec
+
+AchievementsController
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    redirects to achievements#show
+    creates new achievement in the database
+
+Achievement Page
+  Achievement Public Page
+  Render Markdown Description
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 0.49748 seconds (files took 1.81 seconds to load)
+11 examples, 0 failures
+```
+
+#### Testing against invalid data in a POST request
+
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'POST create' do
+    context 'valid data' do
+      it 'redirects to achievements#show' do
+        post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement) }
+        expect(response).to redirect_to(achievement_path(assigns[:achievement]))
+      end
+
+      it 'creates new achievement in the database' do
+        expect {
+          post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement) }
+        }.to change(Achievement, :count).by(1)
+      end
+    end
+
+    context 'invalid data' do
+      it 'renders :new template' do
+        post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement, title: '') }
+        expect(response).to render_template(:new)
+      end
+
+      it 'does not create a new achievement in the database' do
+        expect {
+          post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement, title: '') }
+        }.to_not change(Achievement, :count)
+      end
+      
+    end
+  end
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Finished in 0.09109 seconds (files took 1.8 seconds to load)
+8 examples, 0 failures
+```
+
+#### Refactor
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'POST create' do
+    context 'valid data' do
+      let(:valid_data) { FactoryGirl.attributes_for(:public_achievement) }
+      
+      it 'redirects to achievements#show' do
+        post :create, params: { achievement: valid_data }
+        expect(response).to redirect_to(achievement_path(assigns[:achievement]))
+      end
+
+      it 'creates new achievement in the database' do
+        expect {
+          post :create, params: { achievement: valid_data }
+        }.to change(Achievement, :count).by(1)
+      end
+    end
+
+    context 'invalid data' do
+      let(:invalid_data) { FactoryGirl.attributes_for(:public_achievement, title: '') }
+
+      it 'renders :new template' do
+        post :create, params: { achievement: invalid_data }
+        expect(response).to render_template(:new)
+      end
+
+      it 'does not create a new achievement in the database' do
+        expect {
+          post :create, params: { achievement: invalid_data }
+        }.to_not change(Achievement, :count)
+      end
+      
+    end
+  end
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Finished in 0.08879 seconds (files took 1.82 seconds to load)
+8 examples, 0 failures
+```
 ---
 
 ### Test Index and Edit actions
