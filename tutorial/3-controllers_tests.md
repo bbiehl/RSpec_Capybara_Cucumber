@@ -935,6 +935,520 @@ Finished in 0.13 seconds (files took 1.85 seconds to load)
 ---
 
 ### Test Update and Destroy actions
+#### Test Update action
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'PUT update' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    context 'valid data' do
+      let(:valid_data) { FactoryGirl.attributes_for(:public_achievement, title: 'New Title') }
+      
+      it 'redirects to achievements#show' do
+        put :update, params: { id: achievement, achievement: valid_data }
+        expect(reponse).to redirect_to(achievement)
+      end
+
+      it 'updates the achievement in the database'
+    end
+
+    context 'invalid data' do
+      
+    end
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController PUT update valid data redirects to achievements#show
+     Failure/Error: put :update, params: { id: achievement, achievement: valid_data }
+
+     AbstractController::ActionNotFound:
+       The action 'update' could not be found for AchievementsController
+```
+
+_/app/controllers/achievements_controller.rb_ (after `def edit`)
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def update
+    
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController PUT update valid data redirects to achievements#show
+     Failure/Error: expect(response).to redirect_to(achievement)
+       Expected response to be a <3XX: redirect>, but was a <204: No Content>
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def update
+    render nothing: true
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController PUT update valid data redirects to achievements#show
+     Failure/Error: expect(response).to redirect_to(achievement)
+       Expected response to be a <3XX: redirect>, but was a <200: OK>
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def update
+    @achievement = Achievement.find(params[:id])
+    redirect_to achievement_path(@achievement)
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Finished in 0.1226 seconds (files took 1.84 seconds to load)
+14 examples, 0 failures, 1 pending
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'PUT update' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    context 'valid data' do
+      let(:valid_data) { FactoryGirl.attributes_for(:public_achievement, title: 'New Title') }
+      
+      it 'redirects to achievements#show' do
+        put :update, params: { id: achievement, achievement: valid_data }
+        expect(response).to redirect_to(achievement)
+      end
+
+      it 'updates the achievement in the database' do
+        put :update, params: { id: achievement, achievement: valid_data }
+        achievement.reload
+        expect(achievement.title).to eq('New Title')
+      end
+    end
+
+    context 'invalid data' do
+      
+    end
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController PUT update valid data updates the achievement in the database
+     Failure/Error: expect(achievement.title).to eq('New Title')
+
+       expected: "New Title"
+            got: "Achievement 6"
+
+       (compared using ==)
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def update
+    @achievement = Achievement.find(params[:id])
+    if @achievement.update_attributes(achievement_params)
+      redirect_to achievement_path(@achievement)
+    end
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET index
+    renders :index template
+    assigns only public achievements to the template
+  GET edit
+    renders :edit template
+    assigns the requested achievement to the template
+  PUT update
+    valid data
+      redirects to achievements#show
+      updates the achievement in the database
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Finished in 0.14568 seconds (files took 1.86 seconds to load)
+14 examples, 0 failures
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'PUT update' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    .
+    .
+    .
+
+    context 'invalid data' do
+      let(:invalid_data) { FactoryGirl.attributes_for(:public_achievement, title: '', description: 'new description') }
+
+      it 'renders :edit template' do
+        put :update, params: { id: achievement, achievement: invalid_data }
+        expect(response).to render_template(:edit)
+      end
+
+      it 'does not update the achievement in the database'
+    end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController PUT update invalid data renders :edit template
+     Failure/Error: expect(response).to render_template(:edit)
+       expecting <"edit"> but rendering with <[]>
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def update
+    @achievement = Achievement.find(params[:id])
+    if @achievement.update_attributes(achievement_params)
+      redirect_to achievement_path(@achievement)
+    else
+      render :edit
+    end
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Finished in 0.16105 seconds (files took 1.85 seconds to load)
+16 examples, 0 failures, 1 pending
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'PUT update' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    .
+    .
+    .
+
+    context 'invalid data' do
+      let(:invalid_data) { FactoryGirl.attributes_for(:public_achievement, title: '', description: 'new description') }
+
+      it 'renders :edit template' do
+        put :update, params: { id: achievement, achievement: invalid_data }
+        expect(response).to render_template(:edit)
+      end
+
+      it 'does not update the achievement in the database' do
+        put :update, params: { id: achievement, achievement: invalid_data }
+        achievement.reload
+        expect(achievement.description).to_not eq('new description')
+      end
+    end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET index
+    renders :index template
+    assigns only public achievements to the template
+  GET edit
+    renders :edit template
+    assigns the requested achievement to the template
+  PUT update
+    valid data
+      redirects to achievements#show
+      updates the achievement in the database
+    invalid data
+      renders :edit template
+      does not update the achievement in the database
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Finished in 0.16546 seconds (files took 1.85 seconds to load)
+16 examples, 0 failures
+```
+
+#### Test Destroy action
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'DELETE destroy' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    it 'redirects to achievements#index' do
+      delete :destroy, params: { id: achievement }
+      expect(response).to redirect_to(achievements_path)  
+    end
+
+    it 'deletes the achievement from the database'
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController DELETE destroy redirects to achievements#index
+     Failure/Error: delete :destroy, id: achievement
+
+     AbstractController::ActionNotFound:
+       The action 'destroy' could not be found for AchievementsController
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def destroy
+    redirect_to achievements_path
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Finished in 0.1875 seconds (files took 1.89 seconds to load)
+18 examples, 0 failures, 1 pending
+```
+
+_/spec/controllers/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+  .
+  .
+  .
+
+  describe 'DELETE destroy' do
+    let(:achievement) { FactoryGirl.create(:public_achievement) }
+
+    it 'redirects to achievements#index' do
+      delete :destroy, params: { id: achievement }
+      expect(response).to redirect_to(achievements_path)  
+    end
+
+    it 'deletes the achievement from the database' do
+      delete :destroy, params: { id: achievement }
+      expect(Achievement.exists?(achievement.id)).to be_falsey
+    end
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) AchievementsController DELETE destroy deletes the achievement from the database
+     Failure/Error: expect(Achievement.exists?(achievement.id)).to be_falsy
+
+       expected: falsey value
+            got: true
+```
+
+_/app/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  .
+  .
+  .
+
+  def destroy
+    Achievement.destroy(params[:id])
+    redirect_to achievements_path
+  end
+
+  .
+  .
+  .
+end
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  GET index
+    renders :index template
+    assigns only public achievements to the template
+  GET edit
+    renders :edit template
+    assigns the requested achievement to the template
+  PUT update
+    valid data
+      redirects to achievements#show
+      updates the achievement in the database
+    invalid data
+      renders :edit template
+      does not update the achievement in the database
+  DELETE destroy
+    redirects to achievements#index
+    deletes the achievement from the database
+  GET new
+    renders :new template
+    assigns new Achievement to @achievement
+  GET show
+    renders :show template
+    assigns requested achievement to @achievement
+  POST create
+    valid data
+      redirects to achievements#show
+      creates new achievement in the database
+    invalid data
+      renders :new template
+      does not create a new achievement in the database
+
+Finished in 0.20014 seconds (files took 1.87 seconds to load)
+18 examples, 0 failures
+```
 
 ---
 
