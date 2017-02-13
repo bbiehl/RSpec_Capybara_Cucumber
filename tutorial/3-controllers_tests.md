@@ -1453,6 +1453,100 @@ Finished in 0.20014 seconds (files took 1.87 seconds to load)
 ---
 
 ### Install and setup Devise gem
+> basic setup
+
+Install `gem 'devise'` per usual process via Gemfile and `bundle`
+
+
+Then install Devise.
+```
+$ rails g devise:install
+Running via Spring preloader in process 23827
+Expected string default value for '--jbuilder'; got true (boolean)
+      create  config/initializers/devise.rb
+      create  config/locales/devise.en.yml
+===============================================================================
+
+Some setup you must do manually if you haven't yet:
+
+  1. Ensure you have defined default url options in your environments files. Here
+     is an example of default_url_options appropriate for a development environment
+     in config/environments/development.rb:
+
+       config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
+
+     In production, :host should be set to the actual host of your application.
+
+  2. Ensure you have defined root_url to *something* in your config/routes.rb.
+     For example:
+
+       root to: "home#index"
+
+  3. Ensure you have flash messages in app/views/layouts/application.html.erb.
+     For example:
+
+       <p class="notice"><%= notice %></p>
+       <p class="alert"><%= alert %></p>
+
+  4. You can copy Devise views (for customization) to your app by running:
+
+       rails g devise:views
+
+===============================================================================
+```
+
+Here I added `config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }` to files:
+
+* _/config/environments/development.rb_
+* _/config/environments/test.rb_
+
+#### Create a user
+```
+$ rails g devise user
+Running via Spring preloader in process 23972
+Expected string default value for '--jbuilder'; got true (boolean)
+      invoke  active_record
+      create    db/migrate/20170213153020_devise_create_users.rb
+      create    app/models/user.rb
+      invoke    rspec
+      create      spec/models/user_spec.rb
+      invoke      factory_girl
+      create        spec/factories/users.rb
+      insert    app/models/user.rb
+       route  devise_for :users
+
+$ rails db:migrate
+== 20170213153020 DeviseCreateUsers: migrating ================================
+-- create_table(:users)
+   -> 0.0120s
+-- add_index(:users, :email, {:unique=>true})
+   -> 0.0013s
+-- add_index(:users, :reset_password_token, {:unique=>true})
+   -> 0.0009s
+== 20170213153020 DeviseCreateUsers: migrated (0.0145s) =======================
+```       
+
+_/spec/factories/users.rb_
+```ruby
+FactoryGirl.define do
+  factory :user do
+    sequence(:email) { |n| "email#{n}@email.com"}
+    password 'secretsecret'
+  end
+end
+```
+
+_/spec/rails_helper.rb_
+```ruby
+require 'devise' #below require 'rspec/rails'
+
+  .
+  .
+  .
+
+  config.include Devise::TestHelpers, type: :controller #before end
+
+```
 
 ---
 
