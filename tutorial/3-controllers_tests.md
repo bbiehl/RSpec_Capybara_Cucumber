@@ -1544,13 +1544,136 @@ require 'devise' #below require 'rspec/rails'
   .
   .
 
-  config.include Devise::TestHelpers, type: :controller #before end
+  config.include Devise::Test::ControllerHelpers, type: :controller #before end
 
 ```
 
 ---
 
 ### Test Authentication
+> Guest, User, and Owner roles (could also have Admin, etc.)
+
+#### Features
+* Guest can access: index and show views.
+* User has all Guest access, and can create new achievements.
+* Owner has all User access, and can update and destroy their own achievements.
+
+#### Testing for Guest
+_/spec/achievements_controller_spec.rb_
+```ruby
+require 'rails_helper'
+
+describe AchievementsController do
+
+  describe 'Guest' do
+    describe 'GET index' do
+      it 'renders :index template' do
+        get :index
+        expect(response).to render_template(:index)
+      end
+
+      it 'assigns only public achievements to the template' do
+        public_achievement = FactoryGirl.create(:public_achievement)
+        private_achievement = FactoryGirl.create(:private_achievement)
+        get :index
+        expect(assigns(:achievements)).to match_array([public_achievement])
+      end
+    end
+
+    describe 'GET show' do
+      let(:achievement) { FactoryGirl.create(:public_achievement) }
+      it 'renders :show template' do
+        get :show, params: { id: achievement }
+        expect(response).to render_template(:show)
+      end
+
+      it 'assigns requested achievement to @achievement' do
+        get :show, params: { id: achievement }
+        expect(assigns(:achievement)).to eq(achievement)
+      end
+    end
+
+    describe 'GET new' do
+      it 'redirects to login page' do
+        get :new
+        expect(response).to redirect_to(new_user_session_url)
+      end
+    end
+
+    describe 'POST create' do
+      it 'redirects to login page' do
+        post :create, params: { achievement: FactoryGirl.attributes_for(:public_achievement) }
+        expect(response).to redirect_to(new_user_session_url)
+      end
+    end
+
+    describe 'GET edit' do
+      it 'redirects to login page' do
+        get :edit, params: { id: FactoryGirl.attributes_for(:public_achievement) }
+        expect(response).to redirect_to(new_user_session_url)
+      end
+    end
+
+    describe 'PUT update' do
+      it 'redrects to login page' do
+        put :update, params: { id: FactoryGirl.attributes_for(:public_achievement) }
+        expect(response).to redirect_to(new_user_session_url)
+      end
+    end
+
+    describe 'DELETE destroy' do
+      it 'redrects to login page' do
+        delete :destroy, params: { id: FactoryGirl.attributes_for(:public_achievement) }
+        expect(response).to redirect_to(new_user_session_url)
+      end
+    end
+  end
+
+  .
+  .
+  .
+end
+```
+
+_/controllers/achievements_controller.rb_
+```ruby
+class AchievementsController < ApplicationController
+  before_action :authenticate_user!, only: [ :new, :create, :edit, :update, :destroy ]
+
+  .
+  .
+  .
+```
+```
+$ rspec spec/controllers/achievements_controller_spec.rb
+
+AchievementsController
+  Guest
+    GET index
+      renders :index template
+      assigns only public achievements to the template
+    GET show
+      renders :show template
+      assigns requested achievement to @achievement
+    GET new
+      redirects to login page
+    POST create
+      redirects to login page
+    GET edit
+      redirects to login page
+    PUT update
+      redrects to login page
+    DELETE destroy
+      redrects to login page
+```
+
+but
+```
+Finished in 0.34196 seconds (files took 2.59 seconds to load)
+23 examples, 12 failures
+```
+
+Our specs for Guest pass, the rest are now not passing because of Authentication.  We'll fix this with Authorization.
 
 ---
 
