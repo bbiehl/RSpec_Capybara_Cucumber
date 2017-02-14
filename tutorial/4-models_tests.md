@@ -573,3 +573,154 @@ Finished in 0.09297 seconds (files took 1.98 seconds to load)
 ---
 
 ### Testing DB Queries
+
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+
+  .
+  .
+  .
+
+  describe 'DB queries' do
+    it 'can filter titles by letter' do
+      user = FactoryGirl.create(:user)
+      achievement1 = FactoryGirl.create(:public_achievement, title: 'Read a book', user: user)
+      achievement2 = FactoryGirl.create(:public_achievement, title: 'Passed an exam', user: user)
+      expect(Achievement.by_letter('R')).to eq([achievement1])
+    end
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement DB queries can filter titles by letter
+     Failure/Error: expect(Achievement.by_letter('R')).to eq([achievement])
+
+     NoMethodError:
+       undefined method `by_letter' for #<Class:0x007fef18ef9520>
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+
+  .
+  .
+  .
+
+  def self.by_letter(letter)
+    
+  end
+end
+```
+```
+$ rspec
+
+  1) Achievement DB queries can filter titles by letter
+     Failure/Error: expect(Achievement.by_letter('R')).to eq([achievement1])
+
+       expected: [#<Achievement id: 1, title: "Read a book", description: "description", privacy: "public_access", fea..."some_image.png", created_at: "2017-02-14 21:02:34", updated_at: "2017-02-14 21:02:34", user_id: 1>]
+            got: nil
+
+       (compared using ==)
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+  
+  .
+  .
+  .
+
+  def self.by_letter(letter)
+    where('title LIKE ?', "#{letter}%")
+  end
+end
+```
+```
+$ rspec spec/models
+
+Achievement
+  associations
+    should belong to user
+  validations
+    should validate that :title cannot be empty/falsy
+    should validate that :title is case-sensitively unique within the scope of :user_id, producing a custom validation error on failure
+    should validate that :user cannot be empty/falsy
+  instance methods
+    converts markdown to HTML
+    has a silly title concatenated with user's email
+  DB queries
+    can filter titles by letter
+
+Finished in 0.10945 seconds (files took 2.03 seconds to load)
+7 examples, 0 failures
+```
+
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+
+  .
+  .
+  .
+
+  describe 'DB queries' do
+
+    .
+    .
+    .
+
+    it 'sorts achievements by user emails' do
+      dutch = FactoryGirl.create(:user, email: 'dutch@example.com')
+      maverick = FactoryGirl.create(:user, email: 'maverick@example.com')
+      achievement1 = FactoryGirl.create(:public_achievement, title: "Didn't bite anyone", user: maverick)
+      achievement2 = FactoryGirl.create(:public_achievement,title: "Didn't bark", user: dutch)
+      expect(Achievement.by_letter('D')).to eq([achievement2, achievement1])
+    end
+  end
+end
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+
+  .
+  .
+  .
+
+  def self.by_letter(letter)
+    includes(:user).where('title LIKE ?', "#{letter}%").order('users.email')
+  end
+end
+```
+```
+$ rspec spec/models
+
+Achievement
+  associations
+    should belong to user
+  validations
+    should validate that :title cannot be empty/falsy
+    should validate that :title is case-sensitively unique within the scope of :user_id, producing a custom validation error on failure
+    should validate that :user cannot be empty/falsy
+  instance methods
+    converts markdown to HTML
+    has a silly title concatenated with user's email
+  DB queries
+    can filter titles by letter
+    sorts achievements by user emails
+
+Finished in 0.14182 seconds (files took 1.98 seconds to load)
+8 examples, 0 failures
+```

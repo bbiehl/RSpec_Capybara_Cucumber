@@ -17,4 +17,8 @@ class Achievement < ApplicationRecord
   def silly_achievement
     "#{title} by #{user.email}"
   end
+
+  def self.by_letter(letter)
+    includes(:user).where('title LIKE ?', "#{letter}%").order('users.email')
+  end
 end

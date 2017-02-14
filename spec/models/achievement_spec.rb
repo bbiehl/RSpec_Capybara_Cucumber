@@ -24,4 +24,21 @@ RSpec.describe Achievement, type: :model do
       expect(achievement.silly_achievement).to eq('New Achievement by foo@bar.com')
     end
   end
+
+  describe 'DB queries' do
+    it 'can filter titles by letter' do
+      user = FactoryGirl.create(:user)
+      achievement1 = FactoryGirl.create(:public_achievement, title: 'Read a book', user: user)
+      achievement2 = FactoryGirl.create(:public_achievement, title: 'Passed an exam', user: user)
+      expect(Achievement.by_letter('R')).to eq([achievement1])
+    end
+
+    it 'sorts achievements by user emails' do
+      dutch = FactoryGirl.create(:user, email: 'dutch@example.com')
+      maverick = FactoryGirl.create(:user, email: 'maverick@example.com')
+      achievement1 = FactoryGirl.create(:public_achievement, title: "Didn't bite anyone", user: maverick)
+      achievement2 = FactoryGirl.create(:public_achievement,title: "Didn't bark", user: dutch)
+      expect(Achievement.by_letter('D')).to eq([achievement2, achievement1])
+    end
+  end
 end
