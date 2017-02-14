@@ -441,6 +441,135 @@ Finished in 0.06793 seconds (files took 1.96 seconds to load)
 
 ### Testing Instance Methods
 
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+
+  .
+  .
+  .
+
+  describe 'instance methods' do
+    it 'converts markdown to HTML' do
+      achievement = Achievement.new(description: 'Awesome **thing** I *actually* did')
+      expect(achievement.description_html).to include('<strong>thing</strong>')
+      expect(achievement.description_html).to include('<em>actually</em>')
+    end
+  end
+end
+```
+```
+$ rspec spec/models
+
+Achievement
+  associations
+    should belong to user
+  validations
+    should validate that :title cannot be empty/falsy
+    should validate that :title is case-sensitively unique within the scope of :user_id, producing a custom validation error on failure
+    should validate that :user cannot be empty/falsy
+  instance methods
+    converts markdown to HTML
+
+Finished in 0.06517 seconds (files took 1.98 seconds to load)
+5 examples, 0 failures
+```
+
+#### Concat a silly title
+
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+
+  .
+  .
+  .
+
+  describe 'instance methods' do
+    .
+    .
+    .
+
+    it "has a silly title concatenated with user's email" do
+      achievement = Achievement.new(title: 'New Achievement', user: FactoryGirl.create(:user, email: 'foo@bar.com'))
+      expect(achievement.silly_achievement).to eq('New Achievement by foo@bar.com')
+    end
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement instance methods has a silly title concatenated with user's email
+     Failure/Error: expect(achievement.silly_achievement).to eq('New Achievement by foo@bar.com')
+
+     NoMethodError:
+       undefined method `silly_achievement' for #<Achievement:0x007fd339d98398>
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+
+  .
+  .
+  .
+
+  def silly_achievement
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement instance methods has a silly title concatenated with user's email
+     Failure/Error: expect(achievement.silly_achievement).to eq('New Achievement by foo@bar.com')
+
+       expected: "New Achievement by foo@bar.com"
+            got: nil
+
+       (compared using ==)
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+
+  .
+  .
+  .
+
+  def silly_achievement
+    "#{title} by #{user.email}"
+  end
+end
+```
+```
+$ rspec spec/models
+
+Achievement
+  associations
+    should belong to user
+  validations
+    should validate that :title cannot be empty/falsy
+    should validate that :title is case-sensitively unique within the scope of :user_id, producing a custom validation error on failure
+    should validate that :user cannot be empty/falsy
+  instance methods
+    converts markdown to HTML
+    has a silly title concatenated with user's email
+
+Finished in 0.09297 seconds (files took 1.98 seconds to load)
+6 examples, 0 failures
+```
+
 ---
 
 ### Testing DB Queries
