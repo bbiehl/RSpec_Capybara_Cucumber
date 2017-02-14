@@ -226,6 +226,217 @@ Finished in 0.08922 seconds (files took 2.07 seconds to load)
 
 ### Testing Associations
 
+#### Testing that an achievement belongs to a user
+
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+  
+  describe 'validations' do
+
+    .
+    .
+    .
+
+    it 'belongs to user' do
+      achievement = Achievement.new(title: 'title', user: nil)
+      expect(achievement.valid?).to be_falsey
+    end
+  end
+end
+```
+```
+$ rspec
+
+Failures:
+
+  1) Achievement associations belongs to user
+     Failure/Error: expect(achievement.valid?).to be_falsey
+
+       expected: falsey value
+            got: true
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+  belongs_to :user, optional: true
+
+  validates :title, presence: true
+  validates :user, presence: true
+  # validates :title, uniqueness: true
+  validate :unique_title_for_one_user
+  
+  enum privacy: [ :public_access, :private_access, :friends_access ]
+
+  def description_html
+    Redcarpet::Markdown.new(Redcarpet::Render::HTML).render(description)
+  end
+
+  private
+
+  def unique_title_for_one_user
+    existing_achievement = Achievement.find_by(title: title)
+    if existing_achievement && existing_achievement.user == user
+      errors.add(:title, "you can't have two achievements with same title")
+    end
+  end
+end
+```
+```
+$ rspec spec/models
+
+Achievement
+  validations
+    requires title
+    requires title to be unique for one user
+    allows different users to have achievements with identical titles
+    belongs to user
+
+Finished in 0.08913 seconds (files took 2.07 seconds to load)
+4 examples, 0 failures
+```
+
+#### Testing belongs_to user association
+
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+  
+  describe 'validations' do
+
+    .
+    .
+    .
+
+    it 'has belongs_to user association' do
+      # 1st method
+      user = FactoryGirl.create(:user)
+      achievement = FactoryGirl.create(:public_achievement, user: user)
+      expect(achievement.user).to eq(user)
+
+      # 2nd method
+      u = Achievement.reflect_on_association(:user)
+      expect(u.macro).to eq(:belongs_to)
+    end
+  end
+end
+```
+```
+$ rspec spec/models
+
+Achievement
+  validations
+    requires title
+    requires title to be unique for one user
+    allows different users to have achievements with identical titles
+    belongs to user
+    has belongs_to user association
+
+Finished in 0.11504 seconds (files took 2.11 seconds to load)
+5 examples, 0 failures
+```
+
+#### Using Should-matchers Gem
+> https://github.com/thoughtbot/shoulda-matchers
+* in _Gemfile_ add `gem 'shoulda-matchers', require: false` to test group
+* in iTerm `$ bundle`
+* include `require 'shoulda/matchers'` in _/spec/rails_helper_ after `require 'rspec/rails'`
+```ruby
+require 'shoulda/matchers'
+Shoulda::Matchers.configure do |config|
+  config.integrate do |with|
+    with.test_framework :rspec
+    with.library :rails
+  end
+end
+```
+
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+  
+  describe 'validations' do
+    .
+    .
+    .
+  end
+
+  it { should belong_to(:user) }  
+end
+```
+```
+$ spec spec/models
+
+Achievement
+  should belong to user
+  validations
+    requires title
+    requires title to be unique for one user
+    allows different users to have achievements with identical titles
+    belongs to user
+
+Finished in 0.08602 seconds (files took 1.99 seconds to load)
+5 examples, 0 failures
+```
+
+_/app/models/achievement.rb_
+```ruby
+class Achievement < ApplicationRecord
+  belongs_to :user, optional: true
+
+  validates :title, presence: true
+  validates :user, presence: true
+  validates :title, uniqueness: {
+    scope: :user_id,
+    message: "you can't have two achievements with same title"
+  }
+  
+  enum privacy: [ :public_access, :private_access, :friends_access ]
+
+  def description_html
+    Redcarpet::Markdown.new(Redcarpet::Render::HTML).render(description)
+  end
+end
+```
+
+#### Refactor with Shoulda-matchers
+
+_/spec/models/achievement_spec.rb_
+```ruby
+require 'rails_helper'
+
+RSpec.describe Achievement, type: :model do
+  
+  describe 'validations' do
+    it { should validate_presence_of(:title) }
+    it { should validate_uniqueness_of(:title).scoped_to(:user_id).with_message("you can't have two achievements with same title") }
+    it { should validate_presence_of(:user) }
+  end
+
+  it { should belong_to(:user) }  
+end
+```
+```
+$  rspec spec/models
+
+Achievement
+  should belong to user
+  validations
+    should validate that :title cannot be empty/falsy
+    should validate that :title is case-sensitively unique within the scope of :user_id, producing a custom validation error on failure
+    should validate that :user cannot be empty/falsy
+
+Finished in 0.06793 seconds (files took 1.96 seconds to load)
+4 examples, 0 failures
+```
+
 --- 
 
 ### Testing Instance Methods
