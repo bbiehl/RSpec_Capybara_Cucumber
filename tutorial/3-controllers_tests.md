@@ -2020,3 +2020,85 @@ class Achievement < ApplicationRecord
 end
 ```
 
+```
+$ rspec
+
+AchievementsController
+  Guest User
+    behaves like public access to achievements
+      GET index
+        renders :index template
+        assigns only public achievements to template
+      GET show
+        renders :show template
+        assigns requested achievement to @achievement
+    GET new
+      redirects to login page
+    POST create
+      redirects to login page
+    GET edit
+      redirects to login page
+    PUT update
+      redirects to login page
+    DELETE destroy
+      redirects to login page
+  Authenticated User
+    behaves like public access to achievements
+      GET index
+        renders :index template
+        assigns only public achievements to template
+      GET show
+        renders :show template
+        assigns requested achievement to @achievement
+    GET index
+      renders :index template
+      assigns only public achievements to template
+    GET show
+      renders :show template
+      assigns requested achievement to @achievement
+    GET new
+      renders :new template
+      assigns new Achievement to @achievement
+    POST create
+      valid data
+        redirects to achievements#show
+        creates new achievement in database
+      invalid data
+        renders :new template
+        doesn't create new achievement in the database
+    is not the owner of the achievement
+      GET edit
+        redirects to achievements page
+      PUT update
+        redirects to achievements page
+      DELETE destroy
+        redirects to achievements page
+    is the owner of the achievement
+      GET edit
+        renders :edit template
+        assigns the requested achievement to template
+      PUT update
+        valid data
+          redirects to achievements#show
+          updates achievement in the database
+        invalid data
+          renders :edit template
+          doesn't update achievement in the database
+      DELETE destroy
+        redirects to achievements#index
+        deletes achievements from database
+
+Achievement Page
+  Achievement Public Page
+  Render Markdown Description
+
+create new achievement
+  create new achievement with valid data
+  cannot create new achievement with invalid data
+
+home page
+  welcome message
+
+Finished in 1.35 seconds (files took 2.25 seconds to load)
+39 examples, 0 failures
+```
